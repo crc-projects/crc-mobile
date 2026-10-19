@@ -1,2 +1,2 @@
-# CRC organization owners review all changes until component ownership is assigned.
-* @crc-projects
+# Require Jim's review for changes to main when code-owner review is enabled.
+* @jameshbarton

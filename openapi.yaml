@@ -1,0 +1,336 @@
+openapi: 3.1.0
+info:
+  title: CRC Directory Mobile API
+  version: 0.1.0
+  license:
+    name: MIT
+    identifier: MIT
+  description: |
+    Current public endpoints used by the CRC directory client. This contract
+    describes the existing unversioned /api routes; the document version is
+    not a URL version. Administrative endpoints are intentionally excluded.
+servers:
+  - url: https://app.crc-coc.org
+    description: Public CRC service. Use approved mock or development data for coursework.
+  - url: http://127.0.0.1:8000
+    description: Local FastAPI development server.
+security: []
+tags:
+  - name: Directory
+    description: Public congregation records and characteristic codes.
+  - name: Feedback
+    description: Visitor feedback sent to CRC maintainers.
+  - name: Service
+    description: Lightweight API availability check.
+paths:
+  /api/churches:
+    get:
+      tags: [Directory]
+      operationId: getChurches
+      summary: List geocoded, open congregations
+      description: |
+        Returns an array of at most 15,000 rows. The current service has no
+        pagination or bounding-box filter. Use the by-ID route to retrieve one
+        congregation without loading the full directory.
+        Rows without coordinates and rows with a closed year are excluded.
+      responses:
+        '200':
+          description: Congregations in database order; no sort order is guaranteed.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Church'
+  /api/churches/{church_id}:
+    get:
+      tags: [Directory]
+      operationId: getChurchById
+      summary: Get one open, geocoded congregation by ID
+      description: |
+        Returns the same public church fields as list and search, including
+        social links. An unknown, closed, or ungeocoded congregation returns 404.
+      parameters:
+        - name: church_id
+          in: path
+          required: true
+          description: Numeric directory ID from a list or search result.
+          schema:
+            type: integer
+          example: 1109
+      responses:
+        '200':
+          description: Public congregation record.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Church'
+        '404':
+          description: Congregation is not in the public directory.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageError'
+        '422':
+          description: ID is not an integer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+  /api/search:
+    get:
+      tags: [Directory]
+      operationId: searchChurches
+      summary: Search open, geocoded congregations
+      description: |
+        Searches the public directory using simple text or the existing fielded
+        search syntax. Returns at most 250 rows ordered by church name. An empty
+        query is accepted and is not a reliable way to load the whole directory.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search text or advanced expression, such as `state = AR AND code = OC`.
+          schema:
+            type: string
+          example: Little Rock
+      responses:
+        '200':
+          description: Matching congregations.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Church'
+        '400':
+          description: Invalid advanced search expression.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageError'
+        '422':
+          description: Missing required query parameter.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+  /api/char-codes:
+    get:
+      tags: [Directory]
+      operationId: getCharacteristicCodes
+      summary: List characteristic code descriptions
+      description: Ordered by code type, then code. Join these with each church's space-separated `char_codes` value for display.
+      responses:
+        '200':
+          description: Characteristic codes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CharacteristicCode'
+  /api/feedback:
+    post:
+      tags: [Feedback]
+      operationId: submitFeedback
+      summary: Send directory feedback
+      description: |
+        Sends a message to CRC maintainers. Set `opened_at` when the feedback
+        form opens, as Unix time in milliseconds. Submitting in less than three
+        seconds or after 24 hours fails. A nonempty `website` honeypot or blank
+        message receives an accepted response without sending a message. The
+        default rate limit is three submissions per client IP per hour, but
+        deployment configuration may change it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackSubmission'
+      responses:
+        '202':
+          description: Accepted; this does not guarantee delivery for blank or honeypot submissions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackAccepted'
+        '400':
+          description: Form timing is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageError'
+        '422':
+          description: Validation failed or message is fewer than three characters.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/MessageError'
+                  - $ref: '#/components/schemas/ValidationError'
+        '429':
+          description: Client rate limit reached.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageError'
+        '502':
+          description: Feedback email could not be delivered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageError'
+        '503':
+          description: Feedback email is not configured.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageError'
+  /api/ping:
+    get:
+      tags: [Service]
+      operationId: ping
+      summary: Shallow service check
+      description: Returns without checking database or other dependencies.
+      responses:
+        '200':
+          description: API process is responding.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PingResponse'
+components:
+  schemas:
+    Church:
+      type: object
+      description: Public directory row. Fields may change as the underlying data is corrected.
+      required: [id, latitude, longitude, socials]
+      properties:
+        id:
+          type: integer
+          description: Stable directory identifier within the current service.
+        church_name:
+          type: [string, 'null']
+        church_meeting_address_1:
+          type: [string, 'null']
+        church_meeting_address_2:
+          type: [string, 'null']
+        church_meeting_city:
+          type: [string, 'null']
+        church_meeting_region:
+          type: [string, 'null']
+          description: Usually a US state or region code.
+        church_meeting_zip:
+          type: [string, 'null']
+        church_mailing_zip:
+          type: [string, 'null']
+        church_primary_email:
+          type: [string, 'null']
+        church_primary_website:
+          type: [string, 'null']
+        church_primary_phone:
+          type: [string, 'null']
+        church_fax:
+          type: [string, 'null']
+        attendance:
+          type: [integer, 'null']
+        updated_date:
+          type: [string, 'null']
+          format: date
+          description: YYYY-MM-DD when known.
+        char_codes:
+          type: [string, 'null']
+          description: Space-separated characteristic codes, not an array.
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        socials:
+          type: array
+          items:
+            $ref: '#/components/schemas/SocialLink'
+    SocialLink:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        icon_filename:
+          type: [string, 'null']
+        sort_order:
+          type: [integer, 'null']
+        url:
+          type: [string, 'null']
+          description: Open only after normal URI validation in the app.
+    CharacteristicCode:
+      type: object
+      properties:
+        code:
+          type: string
+        type:
+          type: [string, 'null']
+        description:
+          type: [string, 'null']
+    FeedbackSubmission:
+      type: object
+      required: [opened_at]
+      properties:
+        message:
+          type: string
+          default: ''
+          maxLength: 4000
+          description: Nonblank messages must be at least three characters after trimming.
+        name:
+          type: string
+          default: ''
+          maxLength: 120
+        email:
+          type: string
+          default: ''
+          maxLength: 254
+        context:
+          type: object
+          additionalProperties: true
+          description: Optional, read-only UI context. Serialized JSON must be at most 8,000 characters.
+        opened_at:
+          type: integer
+          format: int64
+          description: Unix time in milliseconds when the feedback form opened.
+        website:
+          type: string
+          default: ''
+          maxLength: 200
+          description: Honeypot field; leave empty in a legitimate client.
+    FeedbackAccepted:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          const: accepted
+    PingResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          const: ok
+    MessageError:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string
+    ValidationError:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
