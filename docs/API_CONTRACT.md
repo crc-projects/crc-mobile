@@ -15,10 +15,10 @@ The [OpenAPI document](../openapi.yaml) is the machine-readable contract for the
 | Capability | Method and path | Authentication | Owner | Status |
 | --- | --- | --- | --- | --- |
 | Directory list | `GET /api/churches` | None | CRC backend | Available |
+| Congregation by ID | `GET /api/churches/{church_id}` | None | CRC backend | Available |
 | Directory search | `GET /api/search?q=...` | None | CRC backend | Available |
 | Characteristic codes | `GET /api/char-codes` | None | CRC backend | Available |
 | Visitor feedback | `POST /api/feedback` | None | CRC backend | Available |
 | Shallow service check | `GET /api/ping` | None | CRC backend | Available |
-| Congregation by ID | No public endpoint | TBD | CRC backend | Proposed, not available |
 
-The spec records request fields, response fields, and known errors. The current list and search routes have fixed result limits and no pagination. A direct church-by-ID feature requires a backend change before mobile implementation.
+The spec records request fields, response fields, and known errors. The current list and search routes have fixed result limits and no pagination. The by-ID route supports a detail screen or a saved link without loading the full directory.

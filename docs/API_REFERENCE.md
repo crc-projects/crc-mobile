@@ -17,11 +17,25 @@ not a URL version. Administrative endpoints are intentionally excluded.
 List geocoded, open congregations
 
 Returns an array of at most 15,000 rows. The current service has no
-pagination, bounding-box filter, or dedicated public detail endpoint.
+pagination or bounding-box filter. Use the by-ID route to retrieve one
+congregation without loading the full directory.
 Rows without coordinates and rows with a closed year are excluded.
 
 - Success JSON: `array of Church`
 - `200`: Congregations in database order; no sort order is guaranteed.
+
+### GET `/api/churches/{church_id}`
+
+Get one open, geocoded congregation by ID
+
+Returns the same public church fields as list and search, including
+social links. An unknown, closed, or ungeocoded congregation returns 404.
+
+- Path `church_id` (integer, required): Numeric directory ID from a list or search result.
+- Success JSON: `Church`
+- `200`: Public congregation record.
+- `404`: Congregation is not in the public directory.
+- `422`: ID is not an integer.
 
 ### GET `/api/search`
 

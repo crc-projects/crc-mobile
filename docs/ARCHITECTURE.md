@@ -21,7 +21,7 @@ Suggested first decisions:
 1. Supported iOS and Android versions.
 2. Accessibility requirements and testing devices.
 3. Offline and caching expectations.
-4. Whether a future backend release will add a by-ID route, paging, or API versioning.
+4. Whether a future backend release will add paging or API versioning.
 5. Automated testing and release workflow.
 
 Record significant decisions in `docs/decisions/` as short architecture decision records.

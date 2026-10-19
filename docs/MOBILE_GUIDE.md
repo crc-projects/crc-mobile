@@ -30,6 +30,10 @@ directly; browser CORS settings do not apply to native `HttpClient` requests.
 ```csharp
 var matches = await api.SearchChurchesAsync("Little Rock", cancellationToken);
 var codes = await api.GetCharacteristicCodesAsync(cancellationToken);
+if (matches.Count > 0)
+{
+    var church = await api.GetChurchByIdAsync(matches[0].Id, cancellationToken);
+}
 ```
 
 Cancel an in-flight search when the user changes the query or leaves the view.
@@ -48,9 +52,9 @@ cancellation. Avoid displaying raw server response bodies to users.
 - `GetChurchesAsync()` returns up to 15,000 open, geocoded rows, with no paging
   or promised sort order. Use it only when a full map or offline cache requires
   the larger payload. Do not treat an empty search as a full-directory request.
-- There is no public church-by-ID endpoint. Open a detail screen from a row
-  already returned by search or list. Ask CRC to add a server endpoint before
-  designing a direct-link feature that depends on one.
+- `GetChurchByIdAsync(id)` returns one public record for a detail screen, saved
+  church, or deep link. Treat HTTP 404 as an unavailable listing (unknown,
+  closed, or missing coordinates); a stale saved ID should not crash the app.
 - `char_codes` is a space-separated string. Split it for display and look up
   descriptions from `GetCharacteristicCodesAsync()`; keep unknown codes visible.
 - Some address and contact fields are null. Coordinates exist on returned

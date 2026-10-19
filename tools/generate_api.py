@@ -69,6 +69,7 @@ def generate_client(spec: dict) -> str:
         "#nullable enable",
         "using System;",
         "using System.Collections.Generic;",
+        "using System.Globalization;",
         "using System.Net;",
         "using System.Net.Http;",
         "using System.Net.Http.Json;",
@@ -101,20 +102,35 @@ def generate_client(spec: dict) -> str:
         route = path.lstrip("/")
         result_type = csharp_type(success_schema(operation))
         params = operation.get("parameters", [])
-        if len(params) > 1 or any(param["in"] != "query" for param in params):
+        if len(params) > 1 or any(param["in"] not in {"query", "path"} for param in params):
             raise ValueError(f"Unsupported parameters in {operation['operationId']}")
-        query_arg = "string q, " if params else ""
+        param = params[0] if params else None
+        param_name = pascal(param["name"]) if param else ""
+        param_name = param_name[:1].lower() + param_name[1:]
+        param_type = csharp_type(param["schema"]) if param else ""
+        param_arg = f"{param_type} {param_name}, " if param else ""
         body = operation.get("requestBody")
         body_arg = f"{reference_name(body['content']['application/json']['schema'])} submission, " if body else ""
         lines.extend([
-            f"    public async Task<{result_type}> {name}({query_arg}{body_arg}CancellationToken cancellationToken = default)",
+            f"    public async Task<{result_type}> {name}({param_arg}{body_arg}CancellationToken cancellationToken = default)",
             "    {",
         ])
-        if params:
+        if param and param["in"] == "query":
+            if param_type != "string":
+                raise ValueError(f"Unsupported query parameter in {operation['operationId']}")
             lines.extend([
-                "        ArgumentNullException.ThrowIfNull(q);",
-                f'        var path = "{route}?{params[0]["name"]}=" + Uri.EscapeDataString(q);',
+                f"        ArgumentNullException.ThrowIfNull({param_name});",
+                f'        var path = "{route}?{param["name"]}=" + Uri.EscapeDataString({param_name});',
             ])
+        elif param and param["in"] == "path":
+            placeholder = "{" + param["name"] + "}"
+            if param_type != "int" or route.count(placeholder) != 1:
+                raise ValueError(f"Unsupported path parameter in {operation['operationId']}")
+            prefix, suffix = route.split(placeholder)
+            path_expression = f'"{prefix}" + {param_name}.ToString(CultureInfo.InvariantCulture)'
+            if suffix:
+                path_expression += f' + "{suffix}"'
+            lines.append(f"        var path = {path_expression};")
         else:
             lines.append(f'        const string path = "{route}";')
         if body:
@@ -225,7 +241,7 @@ def generate_reference(spec: dict) -> str:
             "",
         ])
         for param in operation.get("parameters", []):
-            lines.append(f"- Query `{param['name']}` ({markdown_type(param['schema'])}, {'required' if param.get('required') else 'optional'}): {param.get('description', '')}")
+            lines.append(f"- {param['in'].capitalize()} `{param['name']}` ({markdown_type(param['schema'])}, {'required' if param.get('required') else 'optional'}): {param.get('description', '')}")
         if "requestBody" in operation:
             body_schema = operation["requestBody"]["content"]["application/json"]["schema"]
             lines.append(f"- JSON body: `{reference_name(body_schema)}`")

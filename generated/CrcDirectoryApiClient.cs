@@ -2,6 +2,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -34,6 +35,16 @@ public sealed class CrcDirectoryApiClient
         using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         await ThrowIfErrorAsync(response, cancellationToken).ConfigureAwait(false);
         return await response.Content.ReadFromJsonAsync<List<Church>>(JsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? throw new JsonException("The API returned an empty JSON body.");
+    }
+
+    public async Task<Church> GetChurchByIdAsync(int churchId, CancellationToken cancellationToken = default)
+    {
+        var path = "api/churches/" + churchId.ToString(CultureInfo.InvariantCulture);
+        using var request = new HttpRequestMessage(HttpMethod.Get, path);
+        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        await ThrowIfErrorAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<Church>(JsonOptions, cancellationToken).ConfigureAwait(false)
             ?? throw new JsonException("The API returned an empty JSON body.");
     }
 
