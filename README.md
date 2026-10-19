@@ -4,11 +4,11 @@ CRC Mobile is the mobile client for the Churches of Christ Research Council dire
 
 ## Project status
 
-The repository is in its foundation phase. The team should choose the mobile framework only after confirming course constraints, target platforms, accessibility requirements, and CRC's long-term maintenance capacity.
+The repository is in its foundation phase. The client will use .NET MAUI. The student team and CRC maintainers still need to agree on supported iOS and Android versions, accessibility goals, and release support before starting the app shell.
 
 ## Collaboration model
 
-- Students work on short-lived feature branches.
+- Contributors fork the public repository and work on short-lived branches in their forks. Invited collaborators may create branches here.
 - Changes enter `main` through reviewed pull requests.
 - A CRC maintainer approves every merge.
 - Work is tracked through issues with acceptance criteria.
@@ -18,23 +18,26 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) before starting. Security and production
 
 ## Integration with CRC
 
-This app is a separate client of the existing CRC service. It communicates through documented, versioned APIs and must never connect directly to the production database. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/API_CONTRACT.md](docs/API_CONTRACT.md).
+This app is a separate client of the existing CRC service. It communicates through the documented HTTPS API and must never connect directly to the production database. The current routes are unversioned. See the [OpenAPI contract](openapi.yaml), [MAUI integration guide](docs/MOBILE_GUIDE.md), [generated API reference](docs/API_REFERENCE.md), and [generated C# client](generated/CrcDirectoryApiClient.cs).
 
 ## Getting started
 
 1. Review the contribution and security guidance.
 2. Select an approved issue.
-3. Confirm the development API or mock-data approach with a CRC maintainer.
-4. Create a feature branch and open a draft pull request early.
-5. Add framework-specific setup instructions after the architecture decision is approved.
+3. Confirm an approved mock or development API with a CRC maintainer.
+4. Fork the repository, create a feature branch, and open a draft pull request early.
+5. Use the generated client and add MAUI app setup instructions as the app is built.
 
 ## Repository map
 
 - `.github/`: review ownership and contribution templates
-- `docs/`: architecture, API contracts, and future decision records
+- `openapi.yaml`: source of truth for the current public API
+- `docs/`: architecture, API reference, mobile guide, and future decision records
+- `generated/`: C# client generated from the OpenAPI contract
+- `tools/`: generator and its dependency list
 - `CONTRIBUTING.md`: student workflow and definition of done
 - `SECURITY.md`: reporting process and production safeguards
 
 ## License
 
-No license has been selected. Until CRC adds one, the repository remains private and its contents may not be redistributed.
+CRC Mobile is available under the [MIT License](LICENSE), matching the CRC backend's license.
